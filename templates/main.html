@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino Code Compiler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: darkgray;
+        }
+        textarea {
+            width: 100%;
+            height: 825px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            background-color: aliceblue;
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <textarea id="codeInput" placeholder="Write your Arduino code here..."></textarea><br>
+    <button class="btn" onclick="saveToServer()">Compile</button>
+
+    <script>
+        function saveToServer() {
+            let code = document.getElementById("codeInput").value;
+
+            if (code.trim() === "") {
+                alert("Code cannot be empty!");
+                return;
+            }
+
+            fetch("/save_sketch", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("Error: " + data.error);
+                } else {
+                    alert("Sketch saved successfully at: " + data.path);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    </script>
+</body>
+</html>
