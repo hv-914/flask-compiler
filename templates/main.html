@@ -9,11 +9,11 @@
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 50px;
-            background-color: darkgray;
+            background-color: rgb(12, 12, 12);
         }
         textarea {
             width: 100%;
-            height: 825px;
+            height: 650px;
             margin-bottom: 20px;
             font-size: 16px;
             background-color: aliceblue;
@@ -24,12 +24,20 @@
             margin: 5px;
             cursor: pointer;
         }
+        pre {
+            color: white !important;
+            background-color: black;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: left;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
     <textarea id="codeInput" placeholder="Write your Arduino code here..."></textarea><br>
-    <button class="btn" onclick="saveToServer()">Compile</button>
-
+    <button class="btn" onclick="saveToServer()">Save</button>
+    <button class="btn" onclick="compileOnServer()">Compile</button>
     <script>
         function saveToServer() {
             let code = document.getElementById("codeInput").value;
@@ -56,6 +64,37 @@
             })
             .catch(error => console.error("Error:", error));
         }
+
+        function compileOnServer() {
+            fetch("/compile_sketch", { method: "POST" })
+            .then(response => response.json())
+            .then(data => {
+                let outputElement = document.getElementById("output");
+                if (!outputElement) {
+                    outputElement = document.createElement("pre");
+                    outputElement.id = "output";
+                    outputElement.style.color = "white"; // White text
+                    outputElement.style.backgroundColor = "black"; // Black background
+                    outputElement.style.padding = "10px"; // Some padding for readability
+                    outputElement.style.borderRadius = "5px"; // Rounded corners
+                    outputElement.style.textAlign = "left"; // Align text to the left
+                    outputElement.style.overflowX = "auto"; // Allows horizontal scrolling
+                    document.body.appendChild(outputElement);
+                }
+                
+                if (data.error) {
+                    outputElement.innerText = "Compilation Failed:\n" + data.error + 
+                                            "\n\nStandard Output:\n" + (data.stdout || "N/A") + 
+                                            "\n\nStandard Error:\n" + (data.stderr || "N/A");
+                    outputElement.style.color = "red";
+                } else {
+                    outputElement.innerText = "Compilation Successful!\n\n" + data.stdout;
+                    outputElement.style.color = "green";
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
     </script>
 </body>
 </html>
