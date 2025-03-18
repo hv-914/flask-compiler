@@ -1,7 +1,3 @@
-void setup() {
-  // put your setup code here, to run once:
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-}
+import python as python
+import shit as shit
+import hola as vamos
