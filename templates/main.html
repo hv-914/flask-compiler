@@ -9,14 +9,14 @@
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 50px;
-            background-color: rgb(12, 12, 12);
+            background-color: rgb(134, 134, 134);
         }
         textarea {
             width: 100%;
             height: 650px;
             margin-bottom: 20px;
             font-size: 16px;
-            background-color: aliceblue;
+            background-color: rgb(221, 221, 221);
         }
         .btn {
             padding: 10px 20px;
@@ -25,21 +25,40 @@
             cursor: pointer;
         }
         pre {
-            color: white !important;
-            background-color: black;
+            color: rgb(255, 255, 255) !important;
+            background-color: rgb(0, 0, 0);
             padding: 10px;
             border-radius: 5px;
             text-align: left;
             overflow-x: auto;
         }
+        #progressContainer {
+            display: none;
+            width: 100%;
+            background-color: #555;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        #progressBar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
+    <p><strong>{{ ssid }}</strong>: <strong>{{ ip }}</strong></p>
     <textarea id="codeInput" placeholder="Write your Arduino code here..."></textarea><br>
-    <button class="btn" onclick="saveToServer()">Save</button>
     <button class="btn" onclick="compileOnServer()">Compile</button>
+    <div id="progressContainer">
+        <div id="progressBar">0%</div>
+    </div>
     <script>
-        function saveToServer() {
+        function compileOnServer() {
             let code = document.getElementById("codeInput").value;
 
             if (code.trim() === "") {
@@ -47,28 +66,33 @@
                 return;
             }
 
-            fetch("/save_sketch", {
+            let progressBar = document.getElementById("progressBar");
+            let progressContainer = document.getElementById("progressContainer");
+
+            // Reset and show progress bar
+            progressBar.style.width = "0%";
+            progressBar.innerText = "0%";
+            progressContainer.style.display = "block";
+
+            let progress = 0;
+            let interval = setInterval(() => {
+                progress += 10;
+                progressBar.style.width = progress + "%";
+                progressBar.innerText = progress + "%";
+                if (progress >= 90) clearInterval(interval); // Stop at 90% until response
+            }, 500);
+
+            fetch("/compile_sketch", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ code: code })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.error) {
-                    alert("Error: " + data.error);
-                } else {
-                    alert("Sketch saved successfully at: " + data.path);
-                }
-            })
-            .catch(error => console.error("Error:", error));
-        }
+                clearInterval(interval);
+                progressBar.style.width = "100%";
+                progressBar.innerText = "100%";
 
-        function compileOnServer() {
-            fetch("/compile_sketch", { method: "POST" })
-            .then(response => response.json())
-            .then(data => {
                 let outputElement = document.getElementById("output");
                 if (!outputElement) {
                     outputElement = document.createElement("pre");
@@ -81,18 +105,35 @@
                     outputElement.style.overflowX = "auto"; // Allows horizontal scrolling
                     document.body.appendChild(outputElement);
                 }
-                
+
                 if (data.error) {
-                    outputElement.innerText = "Compilation Failed:\n" + data.error + 
-                                            "\n\nStandard Output:\n" + (data.stdout || "N/A") + 
+                    outputElement.innerText = "❌ Compilation Failed:\n" + data.error +
+                                            "\n\nStandard Output:\n" + (data.stdout || "N/A") +
                                             "\n\nStandard Error:\n" + (data.stderr || "N/A");
                     outputElement.style.color = "red";
                 } else {
-                    outputElement.innerText = "Compilation Successful!\n\n" + data.stdout;
+                    outputElement.innerText = "✅ Compilation Successful!\n\n" + data.stdout;
                     outputElement.style.color = "green";
                 }
+
+                // Hide progress bar after 2 seconds
+                setTimeout(() => {
+                    progressContainer.style.display = "none";
+                }, 2000);
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => {
+                clearInterval(interval);
+                progressBar.style.width = "100%";
+                progressBar.innerText = "Error";
+
+                console.error("Error:", error);
+                alert("Compilation failed due to a server error. Please try again.");
+
+                // Hide progress bar after 2 seconds
+                setTimeout(() => {
+                    progressContainer.style.display = "none";
+                }, 2000);
+            });
         }
 
     </script>
