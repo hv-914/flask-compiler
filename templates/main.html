@@ -54,6 +54,7 @@
     <p><strong>{{ ssid }}</strong>: <strong>{{ ip }}</strong></p>
     <textarea id="codeInput" placeholder="Write your Arduino code here..."></textarea><br>
     <button class="btn" onclick="compileOnServer()">Compile</button>
+    <button class="btn" onclick="uploadToBoard()">Upload</button>
     <div id="progressContainer">
         <div id="progressBar">0%</div>
     </div>
@@ -99,21 +100,48 @@
                     outputElement.id = "output";
                     outputElement.style.color = "white"; // White text
                     outputElement.style.backgroundColor = "black"; // Black background
-                    outputElement.style.padding = "10px"; // Some padding for readability
-                    outputElement.style.borderRadius = "5px"; // Rounded corners
-                    outputElement.style.textAlign = "left"; // Align text to the left
-                    outputElement.style.overflowX = "auto"; // Allows horizontal scrolling
+                    outputElement.style.padding = "10px";
+                    outputElement.style.borderRadius = "5px";
+                    outputElement.style.textAlign = "left";
+                    outputElement.style.overflowX = "auto";
                     document.body.appendChild(outputElement);
                 }
 
                 if (data.error) {
-                    outputElement.innerText = "❌ Compilation Failed:\n" + data.error +
+                    outputElement.innerText = "Compilation Failed:\n" + data.error +
                                             "\n\nStandard Output:\n" + (data.stdout || "N/A") +
                                             "\n\nStandard Error:\n" + (data.stderr || "N/A");
                     outputElement.style.color = "red";
                 } else {
-                    outputElement.innerText = "✅ Compilation Successful!\n\n" + data.stdout;
-                    outputElement.style.color = "green";
+                    outputElement.innerText = "Compilation Successful!\n\n" + data.stdout;
+
+                    // Create or update Download Button
+                    let downloadButton = document.getElementById("downloadBin");
+                    if (!downloadButton) {
+                        downloadButton = document.createElement("a");
+                        downloadButton.id = "downloadBin";
+                        downloadButton.innerText = "Download .bin";
+                        downloadButton.style.display = "inline-block";
+                        downloadButton.style.marginTop = "10px";
+                        downloadButton.style.padding = "10px";
+                        downloadButton.style.backgroundColor = "#007BFF";
+                        downloadButton.style.color = "white";
+                        downloadButton.style.borderRadius = "5px";
+                        downloadButton.style.textDecoration = "none";
+                        document.body.appendChild(downloadButton);
+                    }
+                    
+                    // Make sure we're using the field name from the backend response
+                    if (data.bin_filename) { 
+                        let fileName = data.bin_filename;
+                        downloadButton.href = "/download/" + fileName;
+                        downloadButton.download = fileName;
+                        downloadButton.style.display = "block"; // Show button
+                    } else {
+                        console.error("Error: bin_filename is missing in response", data);
+                        alert("Compilation succeeded, but the .bin file is missing.");
+                        downloadButton.style.display = "none";
+                    }
                 }
 
                 // Hide progress bar after 2 seconds

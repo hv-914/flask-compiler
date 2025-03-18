@@ -1,7 +1,7 @@
 import os
 import subprocess
 import re
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, send_file
 
 app = Flask(__name__)
 
@@ -77,5 +77,14 @@ def compile_sketch():
             "stderr": e.stderr
         }), 500
 
+# Decorator to download the .ino.bin file
+@app.route("/download/<filename>", methods = ['GET'])
+def downloads(filename):
+    binpath = os.path.join(os.path.abspath("outputs"), filename)
+    if os.path.exists(binpath):
+        return send_from_directory("outputs", filename, as_attachment = True)
+    else:
+        return jsonify({"Error": "File not found"}), 404
+    
 if __name__ == "__main__":
     app.run("0.0.0.0", port = 80, debug = True)
