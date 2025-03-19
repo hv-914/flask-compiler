@@ -13,9 +13,7 @@ os.makedirs(outputs, exist_ok = True)
 
 fqbn = "esp32:esp32:esp32"
 
-# Default decorator
-@app.route("/")
-def homepage():
+def getip():
     ssid = ip = "Unknown"
     networks = subprocess.run(
         ["netsh", "wlan", "show", "interfaces"], capture_output=True, text=True
@@ -29,12 +27,17 @@ def homepage():
     match = re.search(r"Default Gateway[ .]*: ([\d.]+)", result.stdout)
     if match:
         ip = match.group(1)
-         
+    return ssid, ip
+
+# Default decorator
+@app.route("/")
+def homepage():
+    ssid, ip = getip()
     return render_template("main.html", ssid=ssid, ip=ip)
 
 # Decorator for the compile_sketch button
 @app.route("/compile_sketch", methods = ["POST"])
-def compile_sketch():
+def compile():
     data = request.json
     code = data.get("code", "")
 
@@ -79,12 +82,38 @@ def compile_sketch():
 
 # Decorator to download the .ino.bin file
 @app.route("/download/<filename>", methods = ['GET'])
-def downloads(filename):
+def download(filename):
     binpath = os.path.join(os.path.abspath("outputs"), filename)
     if os.path.exists(binpath):
         return send_from_directory("outputs", filename, as_attachment = True)
     else:
         return jsonify({"Error": "File not found"}), 404
     
+# Decorator to Upload the code
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "file" not in request.files:
+        return "No file uploaded", 400
+    
+    file = request.files["file"]
+    
+    if file.filename == "":
+        return "No selected file", 400
+    
+    upload_folder = os.path.join(os.getcwd(), "uploads")
+    os.makedirs(upload_folder, exist_ok=True)
+
+    filepath = os.path.join(upload_folder, file.filename)
+    file.save(filepath)
+
+    _, ip = getip()
+    command = f"python espota.py -i {ip} -p 3232 --auth= -f {filepath}"
+    
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        return jsonify({"message": "OTA Upload completed", "output": result.stdout, "errors": result.stderr}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run("0.0.0.0", port = 80, debug = True)
