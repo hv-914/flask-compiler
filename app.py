@@ -4,14 +4,13 @@ import re
 from flask import Flask, request, jsonify, render_template, send_from_directory, send_file
 
 app = Flask(__name__)
+fqbn = "esp32:esp32:esp32"
 
 # Define the path of the directories
 sketches = os.path.join(os.getcwd(), "sketches")
 os.makedirs(sketches, exist_ok = True)
 outputs = os.path.join(os.getcwd(), "outputs")
 os.makedirs(outputs, exist_ok = True)
-
-fqbn = "esp32:esp32:esp32"
 
 # Returns the ssid, ip of the Current Network
 def getip():
@@ -46,7 +45,6 @@ def compile():
         return jsonify({"error": "Code cannot be empty"}), 400
     
     file_path = os.path.join(sketches, "sketches.ino")
-
     with open(file_path, "w") as f:
         f.write(code)
 
