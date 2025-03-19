@@ -55,7 +55,6 @@
     <textarea id="codeInput" placeholder="Write your Arduino code here..."></textarea><br>
     <button class="btn" onclick="compileOnServer()">Compile</button>
     <button class="btn" onclick="uploadToBoard()">Upload</button>
-    <input type="file" id="firmwareFile" accept=".bin">
     <div id="progressContainer">
         <div id="progressBar">0%</div>
     </div>
@@ -99,8 +98,8 @@
                 if (!outputElement) {
                     outputElement = document.createElement("pre");
                     outputElement.id = "output";
-                    outputElement.style.color = "white"; // White text
-                    outputElement.style.backgroundColor = "black"; // Black background
+                    outputElement.style.color = "white";
+                    outputElement.style.backgroundColor = "black";
                     outputElement.style.padding = "10px";
                     outputElement.style.borderRadius = "5px";
                     outputElement.style.textAlign = "left";
@@ -115,34 +114,6 @@
                     outputElement.style.color = "red";
                 } else {
                     outputElement.innerText = "Compilation Successful!\n\n" + data.stdout;
-
-                    // Create or update Download Button
-                    let downloadButton = document.getElementById("downloadBin");
-                    if (!downloadButton) {
-                        downloadButton = document.createElement("a");
-                        downloadButton.id = "downloadBin";
-                        downloadButton.innerText = "Download .bin";
-                        downloadButton.style.display = "inline-block";
-                        downloadButton.style.marginTop = "10px";
-                        downloadButton.style.padding = "10px";
-                        downloadButton.style.backgroundColor = "#007BFF";
-                        downloadButton.style.color = "white";
-                        downloadButton.style.borderRadius = "5px";
-                        downloadButton.style.textDecoration = "none";
-                        document.body.appendChild(downloadButton);
-                    }
-                    
-                    // Make sure we're using the field name from the backend response
-                    if (data.bin_filename) { 
-                        let fileName = data.bin_filename;
-                        downloadButton.href = "/download/" + fileName;
-                        downloadButton.download = fileName;
-                        downloadButton.style.display = "block"; // Show button
-                    } else {
-                        console.error("Error: bin_filename is missing in response", data);
-                        alert("Compilation succeeded, but the .bin file is missing.");
-                        downloadButton.style.display = "none";
-                    }
                 }
 
                 // Hide progress bar after 2 seconds
@@ -166,16 +137,6 @@
         }
 
         function uploadToBoard() {
-            let fileInput = document.getElementById("firmwareFile");
-            
-            if (!fileInput || fileInput.files.length === 0) {
-                alert("Please select a firmware file first!");
-                return;
-            }
-
-            let formData = new FormData();
-            formData.append("file", fileInput.files[0]);
-
             let progressBar = document.getElementById("progressBar");
             let progressContainer = document.getElementById("progressContainer");
 
@@ -189,28 +150,51 @@
                 progress += 10;
                 progressBar.style.width = progress + "%";
                 progressBar.innerText = progress + "%";
-                if (progress >= 90) clearInterval(interval);
+                if (progress >= 90) clearInterval(interval); // Stop at 90% until response
             }, 500);
 
             fetch("/upload", {
                 method: "POST",
-                body: formData
             })
-            .then(response => response.text())
-            .then(result => {
+            .then(response => response.json())
+            .then(data => {
                 clearInterval(interval);
                 progressBar.style.width = "100%";
                 progressBar.innerText = "100%";
-                alert(result);
+
+                let outputElement = document.getElementById("output");
+                if (!outputElement) {
+                    outputElement = document.createElement("pre");
+                    outputElement.id = "output";
+                    outputElement.style.color = "white";
+                    outputElement.style.backgroundColor = "black";
+                    outputElement.style.padding = "10px";
+                    outputElement.style.borderRadius = "5px";
+                    outputElement.style.textAlign = "left";
+                    outputElement.style.overflowX = "auto";
+                    document.body.appendChild(outputElement);
+                }
+
+                if (data.error) {
+                    outputElement.innerText = "Upload Failed:\n" + data.error;
+                    outputElement.style.color = "red";
+                } else {
+                    outputElement.innerText = "Upload Successful!\n\n" + data.output;
+                }
+
+                // Hide progress bar after 2 seconds
+                setTimeout(() => {
+                    progressContainer.style.display = "none";
+                }, 2000);
             })
             .catch(error => {
                 clearInterval(interval);
                 progressBar.style.width = "100%";
                 progressBar.innerText = "Error";
-                console.error("Upload failed:", error);
-                alert("Firmware upload failed!");
-            })
-            .finally(() => {
+
+                console.error("Error:", error);
+                alert("Upload failed due to a server error. Please try again.");
+
                 // Hide progress bar after 2 seconds
                 setTimeout(() => {
                     progressContainer.style.display = "none";
