@@ -1,18 +1,37 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
+#include <FastLED.h>
+#define LED_PIN 15
+#define NUM_LEDS 1
+CRGB leds[NUM_LEDS];
 
 // AP Credentials
 const char *ssid = "106-69";     // Access Point SSID
 const char *password = "12345678"; // AP Password (min 8 characters)
  
 // Static IP configuration
-IPAddress local_IP(192, 168, 69, 1);
-IPAddress gateway(192, 168, 69, 1);
+IPAddress local_IP(192, 168, 96, 1);
+IPAddress gateway(192, 168, 96, 1);
 IPAddress subnet(255, 255, 255, 0);
+
+void rgb_led(int r, int g, int b)
+{
+  leds[0] = CRGB(r, g, b);
+  FastLED.show();
+}
+
+void rgb_setup() 
+{
+  FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, NUM_LEDS);
+  FastLED.clear();
+  FastLED.show();
+  delay(10);
+}
 
 void setup() {
     Serial.begin(115200);
 
+    rgb_setup();
     // Configure static IP for AP
     WiFi.softAPConfig(local_IP, gateway, subnet);
 
@@ -46,8 +65,13 @@ void setup() {
 
     ArduinoOTA.begin();
     Serial.println("OTA Ready");
+
 }
 
 void loop() {
     ArduinoOTA.handle(); // Check for OTA updates
+    rgb_led(255, 0, 0);
+    delay(1000);
+    rgb_led(0, 0, 0);
+    delay(1000);
 }
